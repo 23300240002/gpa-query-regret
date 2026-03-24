@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>绩点查询与后悔</title>
+    <style>
+      :root {
+        --bg-1: #f8f2e8;
+        --bg-2: #e9ded1;
+        --text-1: #222d36;
+        --text-2: #5b6770;
+        --card: #fffdf8;
+        --line: #dfd2bf;
+        --accent: #0d9488;
+        --accent-strong: #0f766e;
+        --warn: #c2410c;
+        --ok: #166534;
+        --chip: #f1e8db;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        color: var(--text-1);
+        font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+        background:
+          radial-gradient(circle at 8% 5%, #ffeec9 0%, transparent 34%),
+          radial-gradient(circle at 92% 12%, #d6ece4 0%, transparent 31%),
+          linear-gradient(155deg, var(--bg-1), var(--bg-2));
+        min-height: 100vh;
+      }
+
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px 16px 40px;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: linear-gradient(120deg, #fff9ef, #f5faf7);
+        box-shadow: 0 16px 36px rgba(40, 41, 32, 0.12);
+        padding: 22px 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(27px, 5vw, 40px);
+      }
+
+      .subtitle {
+        margin: 10px 0 0;
+        color: var(--text-2);
+        font-size: 15px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--card);
+        box-shadow: 0 10px 26px rgba(54, 43, 25, 0.08);
+        padding: 16px;
+        animation: rise 0.45s ease both;
+      }
+
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+
+      .hint {
+        color: #726250;
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+
+      .upload-wrap {
+        margin-top: 16px;
+      }
+
+      .drop-zone {
+        border: 2px dashed #c4b399;
+        border-radius: 16px;
+        background: #fffaf2;
+        padding: 26px 12px;
+        text-align: center;
+        transition: all 0.2s ease;
+      }
+
+      .drop-zone.drag {
+        border-color: var(--accent);
+        background: #eefbf8;
+      }
+
+      .upload-actions {
+        margin-top: 12px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .btn,
+      .mini-btn,
+      .main-btn {
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--text-1);
+        border-radius: 10px;
+        padding: 9px 14px;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+      }
+
+      .btn:hover,
+      .mini-btn:hover,
+      .main-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 13px rgba(0, 0, 0, 0.08);
+      }
+
+      .main-btn {
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #f8fffe;
+        border: none;
+        font-weight: 700;
+      }
+
+      .hidden { display: none; }
+
+      .error {
+        margin-top: 10px;
+        border-radius: 10px;
+        border: 1px solid #f6b8a0;
+        background: #fff1ea;
+        color: var(--warn);
+        padding: 9px 10px;
+        display: none;
+      }
+
+      .okline {
+        margin-top: 10px;
+        color: var(--ok);
+        font-size: 14px;
+      }
+
+      .grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 14px;
+      }
+
+      .semester-actions,
+      .calc-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
+      .semester-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+      }
+
+      .semester-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px;
+        background: #fffefb;
+      }
+
+      .result {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(160px, 1fr));
+        gap: 10px;
+      }
+
+      .stat {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 12px;
+      }
+
+      .stat .label { color: var(--text-2); font-size: 13px; }
+      .stat .value { margin-top: 4px; font-size: 24px; font-weight: 700; }
+
+      .selected-chip {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        background: var(--chip);
+        border: 1px solid #d6c9b4;
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 12px;
+        color: #4e463a;
+      }
+
+      .table-wrap {
+        margin-top: 12px;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 940px;
+        background: #fff;
+      }
+
+      th, td {
+        border-bottom: 1px solid #eee5d8;
+        text-align: left;
+        padding: 9px 10px;
+        font-size: 13px;
+        vertical-align: top;
+      }
+
+      th { background: #f9f3e7; color: #3f3a31; }
+
+      .tag {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 12px;
+        border: 1px solid;
+      }
+
+      .tag.ok { color: #166534; background: #e9f8ee; border-color: #9ad8ad; }
+      .tag.skip { color: #8f5f0f; background: #fff8e8; border-color: #f3d49f; }
+
+      .include-toggle {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent-strong);
+        cursor: pointer;
+      }
+
+      .grade-badge {
+        display: inline-block;
+        border: 2px solid;
+        border-radius: 8px;
+        padding: 2px 8px;
+        font-weight: 700;
+        min-width: 44px;
+        text-align: center;
+        background: #fff;
+      }
+
+      .grade-a, .grade-a-plus, .grade-p { border-color: #dc2626; color: #b91c1c; }
+      .grade-a-minus { border-color: #ea580c; color: #c2410c; }
+      .grade-b-plus { border-color: #ca8a04; color: #a16207; }
+      .grade-b { border-color: #86efac; color: #166534; }
+      .grade-b-minus { border-color: #166534; color: #14532d; }
+      .grade-c-plus { border-color: #38bdf8; color: #0369a1; }
+      .grade-c { border-color: #1d4ed8; color: #1e3a8a; }
+      .grade-c-minus { border-color: #7c3aed; color: #6d28d9; }
+      .grade-d { border-color: #4c1d95; color: #4c1d95; }
+      .grade-d-minus, .grade-f, .grade-np { border-color: #9ca3af; color: #4b5563; }
+      .grade-default { border-color: #9ca3af; color: #4b5563; }
+
+      @media (max-width: 940px) {
+        .grid { grid-template-columns: 1fr; }
+        .result { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <h1>绩点查询与后悔</h1>
+        <p class="subtitle">先上传CSV，再进行学期筛选、勾选计入切换、绩点计算与结果下载。</p>
+      </section>
+
+      <section class="panel upload-wrap">
+        <h2>1. 上传CSV</h2>
+        <div class="hint">支持拖拽到下方区域，或点击选择文件。未上传前不显示成绩面板。</div>
+        <div id="dropZone" class="drop-zone">
+          <div>将CSV文件拖到这里</div>
+          <div style="margin-top: 6px; color: #6f675d; font-size: 13px;">或点击下方按钮选择文件</div>
+          <div class="upload-actions">
+            <input id="fileInput" type="file" accept=".csv" class="hidden" />
+            <button id="pickFileBtn" class="btn" type="button">选择CSV文件</button>
+            <button id="reuploadBtn" class="btn hidden" type="button">重新上传</button>
+          </div>
+          <div id="uploadInfo" class="okline"></div>
+        </div>
+        <div id="errorBox" class="error"></div>
+      </section>
+
+      <section id="workArea" class="hidden">
+        <section class="grid">
+          <section class="panel">
+            <h2>2. 选择学期</h2>
+            <div class="hint">全选表示全部学期；勾选后点击“计算绩点”刷新结果。</div>
+            <div class="semester-actions">
+              <button id="selectAllBtn" class="mini-btn" type="button">全选</button>
+              <button id="clearAllBtn" class="mini-btn" type="button">清空</button>
+            </div>
+            <div id="semesterList" class="semester-list"></div>
+          </section>
+
+          <section class="panel">
+            <h2>3. 计算操作</h2>
+            <div class="hint">在下方表格可切换每门课是否计入，点“恢复初始”回到默认，再点“计算绩点”生效。</div>
+            <div class="calc-actions">
+              <button id="calcBtn" class="main-btn" type="button">计算绩点</button>
+              <button id="resetCourseToggleBtn" class="mini-btn" type="button">恢复初始状态</button>
+              <button id="downloadBtn" class="mini-btn" type="button">下载当前结果CSV</button>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel" style="margin-top: 14px;">
+          <h2>4. 计算结果</h2>
+          <div class="result">
+            <div class="stat">
+              <div class="label">学期范围课程数</div>
+              <div id="courseCount" class="value">-</div>
+            </div>
+            <div class="stat">
+              <div class="label">纳入绩点总学分</div>
+              <div id="totalCredits" class="value">-</div>
+            </div>
+            <div class="stat">
+              <div class="label">加权平均绩点</div>
+              <div id="avgGpa" class="value">-</div>
+            </div>
+          </div>
+          <div id="selectedSemesters" class="selected-chip"></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>课程名称</th>
+                  <th>学期</th>
+                  <th>类型</th>
+                  <th>学分</th>
+                  <th>计入</th>
+                  <th>等第</th>
+                  <th>绩点</th>
+                  <th>状态</th>
+                  <th>备注</th>
+                </tr>
+              </thead>
+              <tbody id="courseBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const dropZoneEl = document.getElementById("dropZone");
+      const fileInputEl = document.getElementById("fileInput");
+      const pickFileBtnEl = document.getElementById("pickFileBtn");
+      const reuploadBtnEl = document.getElementById("reuploadBtn");
+      const uploadInfoEl = document.getElementById("uploadInfo");
+
+      const workAreaEl = document.getElementById("workArea");
+      const semesterListEl = document.getElementById("semesterList");
+      const selectedSemestersEl = document.getElementById("selectedSemesters");
+      const errorBoxEl = document.getElementById("errorBox");
+      const courseBodyEl = document.getElementById("courseBody");
+      const courseCountEl = document.getElementById("courseCount");
+      const totalCreditsEl = document.getElementById("totalCredits");
+      const avgGpaEl = document.getElementById("avgGpa");
+
+      const includeOverrides = new Map();
+      const defaultIncludeStates = new Map();
+      let currentDatasetId = "";
+      let currentResultRows = [];
+
+      function showError(message) {
+        if (!message) {
+          errorBoxEl.style.display = "none";
+          errorBoxEl.textContent = "";
+          return;
+        }
+        errorBoxEl.style.display = "block";
+        errorBoxEl.textContent = message;
+      }
+
+      function getSelectedSemesters() {
+        return [...document.querySelectorAll("input[name='semester']:checked")].map((el) => el.value);
+      }
+
+      function gradeClass(grade) {
+        const g = (grade || "").trim().toUpperCase();
+        if (g === "A") return "grade-a";
+        if (g === "A+") return "grade-a-plus";
+        if (g === "A-") return "grade-a-minus";
+        if (g === "B+") return "grade-b-plus";
+        if (g === "B") return "grade-b";
+        if (g === "B-") return "grade-b-minus";
+        if (g === "C+") return "grade-c-plus";
+        if (g === "C") return "grade-c";
+        if (g === "C-") return "grade-c-minus";
+        if (g === "D") return "grade-d";
+        if (g === "D-") return "grade-d-minus";
+        if (g === "F") return "grade-f";
+        if (g === "P") return "grade-p";
+        if (g === "NP") return "grade-np";
+        return "grade-default";
+      }
+
+      function renderSemesterOptions(semesters) {
+        semesterListEl.innerHTML = "";
+        semesters.forEach((semester) => {
+          const row = document.createElement("label");
+          row.className = "semester-item";
+          row.innerHTML = `
+            <input type="checkbox" name="semester" value="${semester}" checked />
+            <span>${semester}</span>
+          `;
+          semesterListEl.appendChild(row);
+        });
+      }
+
+      function renderSemesterChips(semesters) {
+        selectedSemestersEl.innerHTML = "";
+        semesters.forEach((s) => {
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.textContent = s;
+          selectedSemestersEl.appendChild(chip);
+        });
+      }
+
+      function syncOverridesFromTable() {
+        document.querySelectorAll("input[data-course-id]").forEach((el) => {
+          includeOverrides.set(el.dataset.courseId, Boolean(el.checked));
+        });
+      }
+
+      function buildIncludeOverrideObject() {
+        const obj = {};
+        for (const [key, value] of includeOverrides.entries()) {
+          obj[key] = value;
+        }
+        return obj;
+      }
+
+      function resetToDefaultStates() {
+        includeOverrides.clear();
+        for (const [key, value] of defaultIncludeStates.entries()) {
+          includeOverrides.set(key, value);
+        }
+        document.querySelectorAll("input[data-course-id]").forEach((el) => {
+          const val = includeOverrides.get(el.dataset.courseId);
+          el.checked = Boolean(val);
+        });
+      }
+
+      function renderCourses(rows) {
+        currentResultRows = rows;
+        courseBodyEl.innerHTML = "";
+        for (const c of rows) {
+          const tr = document.createElement("tr");
+          const badgeClass = gradeClass(c.grade);
+          tr.innerHTML = `
+            <td>${c.name}</td>
+            <td>${c.semester}</td>
+            <td>${c.course_type || ""}</td>
+            <td>${c.credit}</td>
+            <td><input class="include-toggle" type="checkbox" data-course-id="${c.course_id}" ${c.included ? "checked" : ""} /></td>
+            <td><span class="grade-badge ${badgeClass}">${c.grade || ""}</span></td>
+            <td>${c.gpa || ""}</td>
+            <td><span class="tag ${c.included ? "ok" : "skip"}">${c.status}</span></td>
+            <td>${c.remark || ""}</td>
+          `;
+          courseBodyEl.appendChild(tr);
+        }
+
+        document.querySelectorAll("input[data-course-id]").forEach((el) => {
+          el.addEventListener("change", () => {
+            includeOverrides.set(el.dataset.courseId, Boolean(el.checked));
+          });
+        });
+      }
+
+      async function uploadCsv(file) {
+        if (!file) return;
+        showError("");
+
+        const form = new FormData();
+        form.append("file", file);
+
+        const resp = await fetch("/api/upload", { method: "POST", body: form });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {
+          throw new Error(data.error || "上传失败，请检查文件格式。");
+        }
+
+        currentDatasetId = data.dataset_id;
+        uploadInfoEl.textContent = `已上传：${data.filename}（${data.course_count} 门课程）`;
+        renderSemesterOptions(data.semesters || []);
+
+        workAreaEl.classList.remove("hidden");
+        reuploadBtnEl.classList.remove("hidden");
+
+        await calculate();
+      }
+
+      async function calculate() {
+        showError("");
+        if (!currentDatasetId) {
+          throw new Error("请先上传CSV文件。");
+        }
+
+        syncOverridesFromTable();
+        const semesters = getSelectedSemesters();
+        const include_overrides = buildIncludeOverrideObject();
+
+        const resp = await fetch("/api/calculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dataset_id: currentDatasetId, semesters, include_overrides })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {
+          throw new Error(data.error || "计算失败，请稍后重试。");
+        }
+
+        courseCountEl.textContent = String(data.course_count);
+        totalCreditsEl.textContent = data.total_credits;
+        avgGpaEl.textContent = data.average_gpa;
+        renderSemesterChips(data.selected_semesters || []);
+
+        defaultIncludeStates.clear();
+        includeOverrides.clear();
+        (data.courses || []).forEach((c) => {
+          defaultIncludeStates.set(c.course_id, Boolean(c.default_included));
+          includeOverrides.set(c.course_id, Boolean(c.included));
+        });
+
+        renderCourses(data.courses || []);
+      }
+
+      function downloadCurrentResult() {
+        if (!currentResultRows.length) {
+          showError("暂无可下载结果，请先计算。");
+          return;
+        }
+
+        const headers = ["课程名称", "修读时间", "课程类型", "学分", "等第", "绩点", "计入", "状态", "备注"];
+        const lines = [headers.join(",")];
+
+        for (const row of currentResultRows) {
+          const values = [
+            row.name,
+            row.semester,
+            row.course_type || "",
+            row.credit,
+            row.grade || "",
+            row.gpa || "",
+            row.included ? "是" : "否",
+            row.status || "",
+            row.remark || "",
+          ].map((v) => {
+            const text = String(v).replace(/"/g, '""');
+            return `"${text}"`;
+          });
+          lines.push(values.join(","));
+        }
+
+        const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "绩点计算结果.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      pickFileBtnEl.addEventListener("click", () => fileInputEl.click());
+      reuploadBtnEl.addEventListener("click", () => fileInputEl.click());
+
+      fileInputEl.addEventListener("change", () => {
+        const file = fileInputEl.files && fileInputEl.files[0];
+        uploadCsv(file).catch((err) => showError(err.message || "上传失败"));
+      });
+
+      ["dragenter", "dragover"].forEach((evt) => {
+        dropZoneEl.addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZoneEl.classList.add("drag");
+        });
+      });
+
+      ["dragleave", "drop"].forEach((evt) => {
+        dropZoneEl.addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZoneEl.classList.remove("drag");
+        });
+      });
+
+      dropZoneEl.addEventListener("drop", (e) => {
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        uploadCsv(file).catch((err) => showError(err.message || "上传失败"));
+      });
+
+      document.getElementById("selectAllBtn").addEventListener("click", () => {
+        document.querySelectorAll("input[name='semester']").forEach((el) => {
+          el.checked = true;
+        });
+      });
+
+      document.getElementById("clearAllBtn").addEventListener("click", () => {
+        document.querySelectorAll("input[name='semester']").forEach((el) => {
+          el.checked = false;
+        });
+      });
+
+      document.getElementById("calcBtn").addEventListener("click", () => {
+        calculate().catch((err) => showError(err.message || "计算失败"));
+      });
+
+      document.getElementById("resetCourseToggleBtn").addEventListener("click", () => {
+        resetToDefaultStates();
+      });
+
+      document.getElementById("downloadBtn").addEventListener("click", () => {
+        downloadCurrentResult();
+      });
+    </script>
+  </body>
+</html>
