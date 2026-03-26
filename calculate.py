@@ -11,6 +11,17 @@ REQUIRED_COLUMNS = ["课程名称", "修读时间", "学分", "等第", "绩点"
 OPTIONAL_COLUMNS = ["课程类型", "备注"]
 ALLOWED_GRADES = {"A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "D-", "F", "P", "NP"}
 EXCLUDED_GRADES = {"P", "NP", "F"}
+CANONICAL_SEMESTERS = [
+    "大一上",
+    "大一下",
+    "大二上",
+    "大二下",
+    "大三上",
+    "大三下",
+    "大四上",
+    "大四下",
+]
+CANONICAL_SEMESTER_INDEX = {name: idx for idx, name in enumerate(CANONICAL_SEMESTERS)}
 
 
 @dataclass
@@ -117,6 +128,15 @@ def _validate_grade_and_gpa(grade: str, gpa: Decimal | None, row_index: int) -> 
         raise ValidationError(f"第 {row_index} 行：等第 D- 的绩点必须为 1.0。")
 
 
+def _validate_semester(semester: str, row_index: int) -> None:
+    if semester not in CANONICAL_SEMESTER_INDEX:
+        raise ValidationError(
+            f"第 {row_index} 行：修读时间 {semester} 不合法。"
+            + "允许值："
+            + "、".join(CANONICAL_SEMESTERS)
+        )
+
+
 def load_courses_from_csv_text(csv_text: str) -> list[Course]:
     dialect = detect_csv_dialect_from_text(csv_text)
 
@@ -133,6 +153,7 @@ def load_courses_from_csv_text(csv_text: str) -> list[Course]:
             semester = normalize_text(row.get("修读时间"))
             if semester == "":
                 raise ValidationError(f"第 {row_num} 行：修读时间不能为空。")
+            _validate_semester(semester, row_num)
 
             credit = parse_decimal(normalize_text(row.get("学分")), "学分", row_num)
             if credit <= 0:
@@ -180,13 +201,10 @@ def load_courses_from_csv_bytes(raw_bytes: bytes) -> list[Course]:
 
 
 def get_semesters(courses: list[Course]) -> list[str]:
-    ordered: list[str] = []
-    seen: set[str] = set()
-    for c in courses:
-        if c.semester and c.semester not in seen:
-            seen.add(c.semester)
-            ordered.append(c.semester)
-    return ordered
+    unique = {c.semester for c in courses if c.semester}
+    known = [s for s in CANONICAL_SEMESTERS if s in unique]
+    others = sorted([s for s in unique if s not in CANONICAL_SEMESTER_INDEX])
+    return known + others
 
 
 def default_included(course: Course) -> bool:
